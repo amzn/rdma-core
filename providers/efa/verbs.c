@@ -39,6 +39,29 @@ static bool is_buf_cleared(void *buf, size_t len)
 
 #define is_reserved_cleared(reserved) is_buf_cleared(reserved, sizeof(reserved))
 
+static int efa_everbs_get_ah(struct efa_dev *dev, struct efa_ah *ah,
+			     struct ibv_pd *pd, struct ibv_ah_attr *attr)
+{
+	struct efa_everbs_get_ah_resp resp = {};
+	struct efa_everbs_get_ah cmd = {};
+
+	cmd.command = EFA_EVERBS_CMD_GET_AH;
+	cmd.in_words = sizeof(cmd) / 4;
+	cmd.out_words = sizeof(resp) / 4;
+	cmd.response = (uintptr_t)&resp;
+
+	cmd.user_handle = (uintptr_t)&ah->ibvah;
+	cmd.pdn = to_efa_pd(pd)->pdn;
+	memcpy(cmd.gid, attr->grh.dgid.raw, 16);
+
+	if (write(dev->everbs_cmd_fd, &cmd, sizeof(cmd)) != sizeof(cmd))
+		return -errno;
+
+	ah->efa_ah = resp.efa_address_handle;
+
+	return 0;
+}
+
 int efa_query_device(struct ibv_context *ibvctx,
 		     struct ibv_device_attr *dev_attr)
 {
@@ -1642,6 +1665,7 @@ int efadv_query_ah(struct ibv_ah *ibvah, struct efadv_ah_attr *attr,
 
 struct ibv_ah *efa_create_ah(struct ibv_pd *ibvpd, struct ibv_ah_attr *attr)
 {
+	struct efa_context *ctx = to_efa_context(ibvpd->context);
 	struct efa_create_ah_resp resp = {};
 	struct efa_ah *ah;
 	int err;
@@ -1658,7 +1682,18 @@ struct ibv_ah *efa_create_ah(struct ibv_pd *ibvpd, struct ibv_ah_attr *attr)
 		return NULL;
 	}
 
-	ah->efa_ah = resp.efa_address_handle;
+	if (ctx->cmds_supp_udata_mask & EFA_USER_CMDS_SUPP_UDATA_CREATE_AH) {
+		ah->efa_ah = resp.efa_address_handle;
+	} else {
+		err = efa_everbs_get_ah(to_efa_dev(ibvpd->context->device), ah,
+					ibvpd, attr);
+		if (err) {
+			ibv_cmd_destroy_ah(&ah->ibvah);
+			free(ah);
+			errno = err;
+			return NULL;
+		}
+	}
 
 	return &ah->ibvah;
 }
