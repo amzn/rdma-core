@@ -3,10 +3,13 @@
  * Copyright 2019-2020 Amazon.com, Inc. or its affiliates. All rights reserved.
  */
 
+#define _GNU_SOURCE
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <util/util.h>
 
@@ -48,6 +51,45 @@ static const struct verbs_context_ops efa_ctx_ops = {
 	.free_context = efa_free_context,
 };
 
+#define EFA_EVERBS_DEV_PATH "/dev/infiniband/"
+#define EFA_EVERBS_DEV_NAME "efa_everbs"
+
+static int efa_everbs_init_cmd_fd(struct efa_context *ctx, int devnum)
+{
+	struct efa_dev *dev = to_efa_dev(ctx->ibvctx.context.device);
+	int exp_mask = EFA_USER_CMDS_SUPP_UDATA_CREATE_AH;
+	char *efa_everbs_dev_path;
+	int efa_everbs_cmd_fd;
+
+	/* everbs cmd file is not created/needed on newer kernels */
+	if ((ctx->cmds_supp_udata_mask & exp_mask) == exp_mask)
+		return 0;
+
+	if (asprintf(&efa_everbs_dev_path,
+		     EFA_EVERBS_DEV_PATH EFA_EVERBS_DEV_NAME "%d", devnum) < 0)
+		return -errno;
+
+	efa_everbs_cmd_fd = open(efa_everbs_dev_path, O_RDWR | O_CLOEXEC);
+	free(efa_everbs_dev_path);
+
+	if (efa_everbs_cmd_fd < 0)
+		return -errno;
+
+	dev->everbs_cmd_fd = efa_everbs_cmd_fd;
+
+	return 0;
+}
+
+static int efa_device_parse_everbs_idx(struct ibv_device *vdev)
+{
+	int devnum;
+
+	if (sscanf(vdev->dev_name, "uverbs%d", &devnum) != 1)
+		return -EINVAL;
+
+	return devnum;
+}
+
 static struct verbs_context *efa_alloc_context(struct ibv_device *vdev,
 					       int cmd_fd,
 					       void *private_data)
@@ -57,6 +99,7 @@ static struct verbs_context *efa_alloc_context(struct ibv_device *vdev,
 	struct ibv_device_attr_ex attr;
 	unsigned int qp_table_sz;
 	struct efa_context *ctx;
+	int devnum;
 	int err;
 
 	cmd.comp_mask |= EFA_ALLOC_UCONTEXT_CMD_COMP_TX_BATCH;
@@ -80,10 +123,6 @@ static struct verbs_context *efa_alloc_context(struct ibv_device *vdev,
 	ctx->min_sq_wr = resp.min_sq_wr;
 	pthread_spin_init(&ctx->qp_table_lock, PTHREAD_PROCESS_PRIVATE);
 
-	/* ah udata is mandatory for ah number retrieval */
-	if (!(ctx->cmds_supp_udata_mask & EFA_USER_CMDS_SUPP_UDATA_CREATE_AH))
-		goto err_free_spinlock;
-
 	verbs_set_ops(&ctx->ibvctx, &efa_ctx_ops);
 
 	err = efa_query_device_ex(&ctx->ibvctx.context, NULL, &attr,
@@ -97,8 +136,17 @@ static struct verbs_context *efa_alloc_context(struct ibv_device *vdev,
 	if (!ctx->qp_table)
 		goto err_free_spinlock;
 
+	devnum = efa_device_parse_everbs_idx(vdev);
+	if (devnum < 0)
+		goto err_free_qp_table;
+
+	if (efa_everbs_init_cmd_fd(ctx, devnum))
+		goto err_free_qp_table;
+
 	return &ctx->ibvctx;
 
+err_free_qp_table:
+	free(ctx->qp_table);
 err_free_spinlock:
 	pthread_spin_destroy(&ctx->qp_table_lock);
 err_free_ctx:
@@ -109,8 +157,11 @@ err_free_ctx:
 
 static void efa_free_context(struct ibv_context *ibvctx)
 {
+	struct efa_dev *dev = to_efa_dev(ibvctx->device);
 	struct efa_context *ctx = to_efa_context(ibvctx);
 
+	if (dev->everbs_cmd_fd)
+		close(dev->everbs_cmd_fd);
 	free(ctx->qp_table);
 	pthread_spin_destroy(&ctx->qp_table_lock);
 	verbs_uninit_context(&ctx->ibvctx);

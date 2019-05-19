@@ -15,6 +15,7 @@
 
 #include "efa-abi.h"
 #include "efa_io_defs.h"
+#include "efa-everbs.h"
 
 struct efa_context {
 	struct verbs_context ibvctx;
@@ -136,6 +137,7 @@ struct efa_ah {
 
 struct efa_dev {
 	struct verbs_device vdev;
+	int everbs_cmd_fd;
 	uint32_t pg_sz;
 };
 
