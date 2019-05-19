@@ -15,9 +15,11 @@
 
 #include "efa-abi.h"
 #include "efa_io_defs.h"
+#include "efa-everbs.h"
 
 struct efa_context {
 	struct verbs_context ibvctx;
+	int everbs_cmd_fd;
 	uint32_t cmds_supp_udata_mask;
 	uint16_t sub_cqs_per_cq;
 	uint16_t inline_buf_size;
