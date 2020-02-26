@@ -1,3 +1,9 @@
+rdma-core (31.amzn0-1) unstable; urgency=medium
+
+  * New Amazon release.
+
+ -- Gal Pressman <galpress@amazon.com>  Sun, 23 Aug 2020 16:28:33 +0300
+
 rdma-core (31.0-1) unstable; urgency=medium
 
   * New upstream release.
