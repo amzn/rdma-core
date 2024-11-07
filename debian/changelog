@@ -1,3 +1,9 @@
+rdma-core (54.amzn0-1) unstable; urgency=medium
+
+  * New Amazon release.
+
+ -- Michael Margolin <mrgolin@amazon.com>  Thu, 7 Nov 2024 17:57:22 +0200
+
 rdma-core (54.0-1) unstable; urgency=medium
 
   * New upstream release.
