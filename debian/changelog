@@ -1,3 +1,10 @@
+rdma-core (57.amzn0-1) unstable; urgency=medium
+
+  * New Amazon release.
+  * Support query QP data in order on ARM platforms
+
+ -- Michael Margolin <mrgolin@amazon.com>  Thu, 8 May 2025 04:04:36 +0300
+
 rdma-core (57.0-1) unstable; urgency=medium
 
   * New upstream release.
