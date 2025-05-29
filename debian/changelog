@@ -1,3 +1,10 @@
+rdma-core (57.amzn1-1) unstable; urgency=medium
+
+  * New Amazon release.
+  * Fix work request index double use
+
+ -- Michael Margolin <mrgolin@amazon.com>  Thu, 29 May 2025 14:33:00 +0300
+
 rdma-core (57.amzn0-1) unstable; urgency=medium
 
   * New Amazon release.
