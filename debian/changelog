@@ -1,8 +1,11 @@
-rdma-core (59.0-1) unstable; urgency=medium
+rdma-core (58.amzn0-1) unstable; urgency=medium
 
-  * New upstream release.
+  * New Amazon release.
+  * Support query QP data in order on ARM platforms
+  * Fix EFA CQ poll after QP destroy
+  * Align Pyverbs code to support Cython 3.1.0 format
 
- -- Jason Gunthorpe <jgg@obsidianresearch.com>  Tue, 21 Jan 2025 13:44:36 +0100
+ -- Michael Margolin <mrgolin@amazon.com>  Mon, 7 Jul 2025 16:51:36 +0300
 
 rdma-core (55.0-1) unstable; urgency=medium
 
