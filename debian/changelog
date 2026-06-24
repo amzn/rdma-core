@@ -1,3 +1,10 @@
+rdma-core (63.amzn0-1) unstable; urgency=medium
+
+  * New Amazon release.
+  * Optimize WR memset on WR creation
+
+ -- Yonatan Nachum <ynachum@amazon.com>  Wed, 24 Jun 2026 15:55:10 +0300
+
 rdma-core (63.0-1) unstable; urgency=medium
 
   * New upstream release.
