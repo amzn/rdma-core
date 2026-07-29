@@ -1,3 +1,10 @@
+rdma-core (64.0amzn0-1) unstable; urgency=medium
+
+  * New Amazon release.
+  * Introduce Completion Counters verbs
+
+ -- Yonatan Nachum <ynachum@amazon.com>  Wed, 29 Jul 2026 16:59:09 +0000
+
 rdma-core (64.0-1) unstable; urgency=medium
 
   * New upstream release.
